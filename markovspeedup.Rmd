@@ -214,14 +214,14 @@ Some useful resources on parallelising
 
 ```{r eval = TRUE, warning = FALSE}
 
-bs_parallelise <- parallelsugar::mclapply(c(1:500), function(i){
+bs_parallelise <- furrr::future_map(c(1:500), function(i){
   calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
 }) %>% unlist()
 
 head(bs_parallelise,3)
 
 ```
-Median time taken = `r round(bench::mark(parallelsugar::mclapply(c(1:500), function(i){set.seed(i); calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)}, mc.cores=2))$median*1000,2)`ms
+Median time taken = `r round(bench::mark(furrr::future_map(c(1:500), function(i){calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)}))$median*1000,2)`ms
 
 Notice that parallelising here is actually _SLOWER_ than vectorising? 
 
@@ -294,14 +294,16 @@ Markov model with 10 states
 - `n.samples` - no. of PSA samples
 - `n.cyles` - number of cycles to run
 
-```{r setup-markov-time, eval = TRUE, echo = FALSE, cache = TRUE}
+```{r setup-markov-time, eval = FALSE, echo = FALSE}
+
+## Pre-run this chunk to generate runtimes
 
 func_call <- c(
   "markov_expanded()", 
   "markov_expanded_lapply()",
   "markov_expanded_vectorisesmp(n.states = 10, n.cycles = 100, n.samples = 25000)", 
   "markov_expanded_lapply_rcpp()",
-  "markov_expanded_parallisesmp_mclapply(n.states = 10, n.cycles = 100, n.samples = 25000)"
+  "markov_expanded_parallisesmp_furrr(n.states = 10, n.cycles = 100, n.samples = 25000)"
 )
 
 names(func_call) <- c(
@@ -320,7 +322,11 @@ df_median_runtime <- median_runtime %>%
   unlist(recursive = FALSE) %>%
   tibble::enframe()
 
+saveRDS(df_median_runtime, "df_median_runtime.rds") 
+
 ```
+
+
 
 ---
 
@@ -497,7 +503,7 @@ for(i.treatment in c(1:n.treatments)){
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
 
-  mclapply(c(1:n.samples), function(i.sample){ #<<
+  furrr::future_map(c(1:n.samples), function(i.sample){ #<<
   
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
