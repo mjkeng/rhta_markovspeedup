@@ -294,35 +294,12 @@ Markov model with 10 states
 - `n.samples` - no. of PSA samples
 - `n.cyles` - number of cycles to run
 
-```{r setup-markov-time, eval = FALSE, echo = FALSE}
+```{r setup-markov-time, eval = TRUE, echo = FALSE}
 
-## Pre-run this chunk to generate runtimes
+df_median_runtime <- readRDS("src/df_benchmark.rds")
 
-func_call <- c(
-  "markov_expanded()", 
-  "markov_expanded_lapply()",
-  "markov_expanded_vectorisesmp(n.states = 10, n.cycles = 100, n.samples = 25000)", 
-  "markov_expanded_lapply_rcpp()",
-  "markov_expanded_parallisesmp_furrr(n.states = 10, n.cycles = 100, n.samples = 25000)"
-)
-
-names(func_call) <- c(
-  "base", 
-  "vectorisetx", 
-  "vectorisesmp", 
-  "vectorisetx_rcppcycle",
-  "parallelisesmp"
-)
-
-median_runtime <- lapply(func_call, function(func){
-  bench::mark(eval(parse(text = func)), iterations = 50, memory = FALSE, check = FALSE)$median
-}) 
-
-df_median_runtime <- median_runtime %>% 
-  unlist(recursive = FALSE) %>%
-  tibble::enframe()
-
-saveRDS(df_median_runtime, "df_median_runtime.rds") 
+# Pre-define column names
+colname_runtime <- c("Code", "Median time across 10 iterations (ms)")
 
 ```
 
@@ -368,7 +345,7 @@ Time to run `n.treatments <- 2; n.states <- 10; n.cycles <- 100; n.samples <- 25
 
 df_median_runtime %>% 
   filter(name %in% c("base")) %>% 
-  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable(col.names = colname_runtime, digit = 2) %>% 
   kable_styling() 
 
 ```
@@ -407,7 +384,7 @@ lapply(c(1:n.treatments), function(i.treatment){  #<<
 
 df_median_runtime %>% 
   filter(name %in% c("base", "vectorisetx")) %>% 
-  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable(col.names = colname_runtime, digit = 2) %>% 
   kable_styling() 
 
 ```
@@ -447,7 +424,7 @@ class: center, middle
 
 df_median_runtime %>% 
   filter(name %in% c("base", "vectorisetx", "vectorisesmp")) %>% 
-  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable(col.names = colname_runtime, digit = 2) %>% 
   kable_styling() 
 
 ```
@@ -488,7 +465,7 @@ class: center, middle
 
 df_median_runtime %>% 
   filter(name %in% c("base", "vectorisetx", "vectorisesmp", "vectorisetx_rcppcycle")) %>% 
-  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable(col.names = colname_runtime, digit = 2) %>% 
   kable_styling() 
 
 ```
@@ -523,7 +500,7 @@ class: center, middle
 
 df_median_runtime %>% 
   filter(name %in% c("base", "vectorisetx", "vectorisesmp", "vectorisetx_rcppcycle", "parallelisesmp")) %>% 
-  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable(col.names = colname_runtime, digit = 2) %>% 
   kable_styling() 
 
 ```
