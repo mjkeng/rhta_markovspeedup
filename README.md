@@ -1,7 +1,7 @@
 
 # Optimising your code in R
 
-Presentation for __R for HTA__ showcase on 9th October 2020. 
+Presentation for __R for HTA__ showcase on 9th October 2020. [View the presentation](https://mjkeng.github.io/rhta_markovspeedup/markovspeedup)
 
 Materials used for the case study in this presentation is based on the work conducted as part of the 2019 R for Health Economics Hackathon. The team behind this work comprise of: 
 
