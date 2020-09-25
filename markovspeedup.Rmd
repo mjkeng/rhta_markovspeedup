@@ -38,12 +38,17 @@ calculate_bs_mean <- function(data, n, replacement){
 
 # Why optimise? 
 
-Many stochastic elements in health economics analysis. 
-- Bootstrapping
-- Probabilistic sensitivity analyses
-- Monte-Carlo simulations
+Many stochastic elements in health economics analysis such as bootstrapping, probabilistic sensitivity analyses, Monte-Carlo simulations etc. 
 
-Code may become very repetitive and/or time consuming to run. 
+- Repetitive code?
+- Time consuming to run?
+- Running out of memory?
+
+--
+
+Optimising your code may resolve these problems. Also makes it easier to correct error, and makes your code neater and more readable. 
+
+
 
 ---
 
@@ -118,7 +123,7 @@ for(i in c(1:500)){
 
 # Vectorisation  
 
-- Many operations in R are vectorized 
+- Many operations in R are vectorised 
 - Instead of working on each element of the vector individually (as in the case of loops), it works on the entire vector. 
 
 ```{r, echo = TRUE, eval = TRUE, size = "footnotesize"}
@@ -157,7 +162,7 @@ vector1 + vector2
 
 # Vectorising your code 
 
-- You can vectorise your loops using functions from the `apply()` family<sup>†</sup>
+- You can also vectorise iterations (i.e. your loops) using functions from the `apply()` family<sup>†</sup>
 - Natural extension from the `for` loop
 
 .pull-left[
@@ -228,7 +233,7 @@ Notice that parallelising here is actually _SLOWER_ than vectorising?
 ---
 
 ### One caveat of parallelisation: overhead time<sup>†</sup> 
-- Each parallel process have their own memory space and data/package needs to be loaded across them all
+- Each parallel process has its own memory space and data/package needs to be loaded across them all
 - A "start-up" time is required before actual computation occurs
 - Need to weigh up the cost-benefit of using parallelisation
   + Usually cost > benefit for smaller task
@@ -246,7 +251,7 @@ Notice that parallelising here is actually _SLOWER_ than vectorising?
 
 ### Pre-calculations
 
-For example, consider a simple simulation model where you are predicting the state a patient is in, and performing costs and QALYs calculation in each cycle. 
+Consider a simple simulation model where you are predicting the state a patient is in, and performing costs and QALYs calculation in each cycle. 
 If the model is simple enough, there is a finite combination of states a patient can be in.
 In this case, perhaps pre-calculating costs and QALYs for all possible combinations of states and applying them after the simulation would be faster than performing calculations every cycle.  
 
@@ -296,10 +301,12 @@ Markov model with 10 states
 
 ```{r setup-markov-time, eval = TRUE, echo = FALSE}
 
-df_median_runtime <- readRDS("src/df_benchmark.rds")
+df_median_runtime <- readRDS("src/df_benchmark.rds") %>% 
+  mutate(name = as.character(expression)) %>% 
+  select(name, median) 
 
 # Pre-define column names
-colname_runtime <- c("Code", "Median time across 10 iterations (ms)")
+colname_runtime <- c("Code", "Median time across 10 iterations")
 
 ```
 
@@ -337,6 +344,7 @@ for(i.treatment in 1:n.treatments){
 
 
 ---
+
 class: center, middle
 
 Time to run `n.treatments <- 2; n.states <- 10; n.cycles <- 100; n.samples <- 25000`
@@ -349,6 +357,7 @@ df_median_runtime %>%
   kable_styling() 
 
 ```
+
 
 --- 
 
