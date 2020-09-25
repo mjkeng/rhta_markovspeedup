@@ -1,0 +1,539 @@
+---
+title: "Optimizing your code in R"
+author: Mi Jun Keng <mijun.keng@ndph.ox.ac.uk>
+institute: "Health Economics Research Centre (HERC), University of Oxford"
+date: "9th October 2020"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      titleSlideClass: [center, middle]
+    css: ["default", "default-fonts", "custom.css"]
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+options(knitr.table.format = "html")
+
+library(dplyr)
+library(kableExtra)
+library(hermes6)
+
+n_sample <- 100
+df <- data.frame(id = c(1:n_sample), 
+                 cost = rnorm(n_sample, 50, 3))
+
+calculate_bs_mean <- function(data, n, replacement){
+  mean(sample(data, n, replace = replacement)) 
+}
+
+```
+
+
+# Why optimise? 
+
+Many stochastic elements in health economics analysis. 
+- Bootstrapping
+- Probabilistic sensitivity analyses
+- Monte-Carlo simulations
+
+Code may become very repetitive and/or time consuming to run. 
+
+---
+
+Consider a dummy example where we want to estimate the average cost of treatment from a sample of 100 patients. 
+To obtain the standard error around the average cost, we perform bootstrapping with 500 re-samples. 
+
+```{r eval = FALSE}
+## Create dummy dataset
+n_sample <- 100
+
+df <- data.frame(id = c(1:n_sample), 
+                 cost = rnorm(n_sample, 50, 3))
+
+## Create empty vector to store mean cost in each bootstrap sample
+bs_mean <- numeric(500)
+
+## Sample without replacement and calculate mean for each bootstrap sample 
+bs_mean[1] <- mean(sample(df$cost, n_sample, replace = FALSE)) 
+bs_mean[2] <- mean(sample(df$cost, n_sample, replace = FALSE)) 
+... 
+## Keep repeating this code 500 times
+...
+bs_mean[500] <- mean(sample(df$cost, n_sample, replace = FALSE)) 
+
+```
+
+---
+class: center
+
+<br />
+<br />
+
+
+But wait... 
+
+--
+
+After all that copying-and-pasting...
+
+--
+
+You now realized you should have sampled with replacement!
+
+--
+
+<center><img src="https://media.giphy.com/media/NQRRqqkImJ3Da/giphy.gif" height="300"></center>
+
+
+---
+
+# Using functions and loops
+
+- Less repetition
+- Easier to fix errors
+
+```{r eval = FALSE}
+calculate_bs_mean <- function(data, n, replacement){
+  mean(sample(data, n, replace = replacement)) 
+}
+
+bs_loop <- numeric(500)
+
+for(i in c(1:500)){
+  set.seed(i)
+  bs_loop[i] <- calculate_bootstrap_mean(data = df$cost, n = n_sample, replacement = TRUE)
+}
+
+```
+
+
+---
+
+# Vectorisation  
+
+- Many operations in R are vectorized 
+- Instead of working on each element of the vector individually (as in the case of loops), it works on the entire vector. 
+
+```{r, echo = TRUE, eval = TRUE, size = "footnotesize"}
+vector1 <- c(1:4); vector2 <- c(6:9)
+```
+
+.pull-left[
+```{r, echo = TRUE, eval = TRUE, size = "footnotesize"}
+## Element-wise computation
+sum <- numeric(length(vector1))
+for(i in seq_along(vector1)) {
+  sum[i] <- vector1[i] + vector2[i]
+}
+sum
+```
+
+]
+
+.pull-right[
+
+```{r, echo = TRUE, eval = TRUE}
+## vectorised computation 
+vector1 + vector2
+```
+]
+
+
+
+.footnote[
+
+1. R is a functional programming language so codes are easier to automatically optimise or parallelise. More details on functional programming in [Hadley Wickham | Advanced R](https://adv-r.hadley.nz/fp.html#functional-programming-languages)
+2. [Noam Ross | Vectorization in R: Why?](https://www.noamross.net/archives/2014-04-16-vectorization-in-r-why/)
+]
+
+---
+
+# Vectorising your code 
+
+- You can vectorise your loops using functions from the `apply()` family<sup>†</sup>
+- Natural extension from the `for` loop
+
+.pull-left[
+```{r, tidy = TRUE}
+bs_loop <- numeric(500)
+
+for(i in c(1:500)){
+  set.seed(i)
+  bs_loop[i] <- calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
+}
+
+head(bs_loop,3)
+```
+
+Median time taken = `r round(bench::mark(for(i in c(1:500)){set.seed(i); bs_loop[i] <- calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)})$median*1000,2)`ms
+]
+
+.pull-right[
+```{r eval = TRUE}
+bs_vectorise <- sapply(c(1:500), function(i){
+  set.seed(i)
+  calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
+})
+
+head(bs_vectorise,3)
+
+```
+Median time taken = `r round(bench::mark(sapply(c(1:500), function(i){set.seed(i); calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)}))$median*1000,2)`ms
+]
+
+.footnote[
+[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family)
+]
+
+---
+
+# Parallelisation
+
+- Many different packages to achieve this. Some examples: 
+  + [foreach](https://cran.r-project.org/web/packages/foreach/vignettes/foreach.html) 
+  + [future](https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html)
+  + [snowfall](https://cran.r-project.org/web/packages/snowfall/vignettes/snowfall.pdf)
+
+.footnote[
+Some useful resources on parallelising
+1. [Max Gordan | How-to go parallel in R – basics + tips](http://gforge.se/2015/02/how-to-go-parallel-in-r-basics-tips/)
+2. [CRAN Task View: High-Performance and Parallel Computing with R](https://cran.r-project.org/web/views/HighPerformanceComputing.html)
+]
+
+---
+
+# Parallelising your code
+
+
+```{r eval = TRUE, warning = FALSE}
+
+bs_parallelise <- parallelsugar::mclapply(c(1:500), function(i){
+  calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
+}) %>% unlist()
+
+head(bs_parallelise,3)
+
+```
+Median time taken = `r round(bench::mark(parallelsugar::mclapply(c(1:500), function(i){set.seed(i); calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)}, mc.cores=2))$median*1000,2)`ms
+
+Notice that parallelising here is actually _SLOWER_ than vectorising? 
+
+---
+
+### One caveat of parallelisation: overhead time<sup>†</sup> 
+- Each parallel process have their own memory space and data/package needs to be loaded across them all
+- A "start-up" time is required before actual computation occurs
+- Need to weigh up the cost-benefit of using parallelisation
+  + Usually cost > benefit for smaller task
+
+
+.footnote[
+[†] Read more about this in [Imre Gera | Parallelization caveats in R #1: performance issues](https://towardsdatascience.com/parallelization-caveats-in-r-1-the-basics-multiprocessing-and-multithreading-performance-eb584b7e850e)
+]
+
+
+
+---
+
+# Other ways to optimise your code
+
+### Pre-calculations
+
+For example, consider a simple simulation model where you are predicting the state a patient is in, and performing costs and QALYs calculation in each cycle. 
+If the model is simple enough, there is a finite combination of states a patient can be in.
+In this case, perhaps pre-calculating costs and QALYs for all possible combinations of states and applying them after the simulation would be faster than performing calculations every cycle.  
+
+### Using a faster language 
+
+Sometimes R is just slow. But R has interfaces to other faster languages via packages. 
+
+- C++: [Rcpp](http://www.rcpp.org/) [probably the most popular]
+- Python: rPython
+- Java: rJava
+
+---
+
+# Case study with a markov model
+
+### Acknowledgements
+
+<img src="https://avatars0.githubusercontent.com/u/57440859?s=200&v=4" height="150" align="right" />
+
+Materials used in this case study is based on the work conducted as part of the 2019 R for Health Economics Hackathon. The team behind this work comprise of: 
+
+- Iryna Schlackow, University of Oxford
+- Mi Jun Keng, University of Oxford
+- Howard Thom, University of Bristol
+- Robert Ashton, Imperial College London
+- Sam Abbott, London School of Hygiene and Tropical Medicine
+- Amy Chang, University of Sheffield
+- Han Fu, Imperial College London
+- Houra Haghpanahan, University of Glasgow
+- Zoe Turner, Nottinghamshire Healthcare NHS Foundation Trust
+
+The R code for the original work is accessible from [GitHub](https://github.com/HealthEconomicsHackathon/hermes6).
+
+.footnote[
+For an implementation of this work, see Sam Abbott's package [`SpeedyMarkov`](https://github.com/seabbs/SpeedyMarkov) (presentation on 12th October 0910-0935)
+]
+
+---
+
+Markov model with 10 states
+
+<img src="/image/markov-model.png" height="450" />
+
+- `n.treatments` - no. of treatment arms 
+- `n.samples` - no. of PSA samples
+- `n.cyles` - number of cycles to run
+
+```{r setup-markov-time, eval = TRUE, echo = FALSE, cache = TRUE}
+
+func_call <- c(
+  "markov_expanded()", 
+  "markov_expanded_lapply()",
+  "markov_expanded_vectorisesmp(n.states = 10, n.cycles = 100, n.samples = 25000)", 
+  "markov_expanded_lapply_rcpp()",
+  "markov_expanded_parallisesmp_mclapply(n.states = 10, n.cycles = 100, n.samples = 25000)"
+)
+
+names(func_call) <- c(
+  "base", 
+  "vectorisetx", 
+  "vectorisesmp", 
+  "vectorisetx_rcppcycle",
+  "parallelisesmp"
+)
+
+median_runtime <- lapply(func_call, function(func){
+  bench::mark(eval(parse(text = func)), iterations = 50, memory = FALSE, check = FALSE)$median
+}) 
+
+df_median_runtime <- median_runtime %>% 
+  unlist(recursive = FALSE) %>%
+  tibble::enframe()
+
+```
+
+---
+
+Extract of code for Markov model (minimal, non-executable)
+```{r markov_expanded, eval = FALSE}
+# Loop over the treatment options
+for(i.treatment in 1:n.treatments){
+  
+  # Extract transition matrix for treatment
+  transition.matrices_tr <- transition.matrices[i.treatment,,,]
+    
+  # Loop over the PSA samples
+  for(i.sample in 1:n.samples){
+    
+    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
+    
+    # Loop over the cycles
+    for(i.cycle in 2:n.cycles){
+      
+      # Markov update  
+      cohort.vectors[i.treatment, i.sample,i.cycle,]<-
+        cohort.vectors[i.treatment, i.sample,i.cycle-1,] %*%
+        transition.matrices_tr_sample
+    }
+    
+    cohort.vectors_tr_sample <- cohort.vectors[i.treatment,i.sample,,]
+  }
+}
+
+```
+
+
+---
+class: center, middle
+
+Time to run `n.treatments <- 2; n.states <- 10; n.cycles <- 100; n.samples <- 25000`
+
+```{r echo = FALSE}
+
+df_median_runtime %>% 
+  filter(name %in% c("base")) %>% 
+  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable_styling() 
+
+```
+
+--- 
+
+### `lapply()` over treatments 
+
+```{r markov_expanded_lapply, eval = FALSE}
+# Vectorised over the treatment options
+lapply(c(1:n.treatments), function(i.treatment){  #<<
+  
+  transition.matrices_tr <- transition.matrices[i.treatment,,,]
+  cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
+  
+  for(i.sample in 1:n.samples){
+    
+    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
+    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
+    
+    for(i.cycle in 2:n.cycles){
+      
+      cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
+    }
+    
+  }
+  
+}) #<<
+```
+
+
+---
+
+
+```{r echo = FALSE}
+
+df_median_runtime %>% 
+  filter(name %in% c("base", "vectorisetx")) %>% 
+  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable_styling() 
+
+```
+
+
+
+---
+
+### `lapply()` over PSA samples
+```{r markov_expanded_vectorisesmp, eval = FALSE}
+for(i.treatment in c(1:n.treatments)){
+  
+  transition.matrices_tr <- transition.matrices[i.treatment,,,]
+  cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
+  
+  lapply(c(1:n.samples), function(i.sample){ #<<
+    
+    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
+    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
+
+    # Loop over the cycles
+    for(i.cycle in 2:n.cycles){
+      # Markov update
+      cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
+    }
+
+  }) 
+})
+
+```
+
+
+---
+class: center, middle
+
+```{r echo = FALSE}
+
+df_median_runtime %>% 
+  filter(name %in% c("base", "vectorisetx", "vectorisesmp")) %>% 
+  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable_styling() 
+
+```
+
+---
+
+### `lapply()` over treatments & `rcpp_loop()` over cycles
+
+```{r markov_expanded_lapply_rcpp, eval = FALSE}
+## Vectorised over treatment
+lapply(c(1:n.treatments), function(i.treatment){ #<<
+  
+  transition.matrices_tr <- transition.matrices[i.treatment,,,]
+  cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
+  
+  # Loop over the PSA samples
+  for(i.sample in 1:n.samples)
+  {
+    
+    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
+    
+    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
+    
+    # Loop over the cycles using Rcpp
+    {{cohort.vectors_tr_sample <- 
+      rcpp_loop(mat_in = cohort.vectors_tr_sample, transition = transition.matrices_tr_sample, n = n.cycles)}}
+    
+  }
+  
+})
+```
+
+---
+class: center, middle
+
+
+```{r echo = FALSE}
+
+df_median_runtime %>% 
+  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "vectorisetx_rcppcycle")) %>% 
+  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable_styling() 
+
+```
+
+---
+
+### `mclapply()` over PSA samples
+
+```{r markov_expanded_parallisesmp_mclapply, eval = FALSE}
+for(i.treatment in c(1:n.treatments)){
+
+  transition.matrices_tr <- transition.matrices[i.treatment,,,]
+  cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
+
+  mclapply(c(1:n.samples), function(i.sample){ #<<
+  
+    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
+    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
+
+    for(i.cycle in 2:n.cycles){
+      cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
+    }
+  }) 
+})
+```
+
+---
+class: center, middle
+
+
+```{r echo = FALSE}
+
+df_median_runtime %>% 
+  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "vectorisetx_rcppcycle", "parallelisesmp")) %>% 
+  kable(col.names = c("Code", "Median time across 50 iterations (ms)"), digit = 2) %>% 
+  kable_styling() 
+
+```
+
+---
+
+# Some useful materials
+
+```{r print-refs, echo=FALSE, eval=TRUE, results='asis'}
+library(RefManageR)
+bib <- ReadBib("rhta_markovspeedup.bib", check = FALSE)
+print(bib, .opts = list(style = "html", bib.style = "authoryear"))
+```
+
+
+---
+class: centre, middle 
+
+
