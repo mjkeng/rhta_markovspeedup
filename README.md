@@ -1,5 +1,5 @@
 
-# Optimizing your code in R
+# Optimising your code in R
 
 Presentation for __R for HTA__ showcase on 9th October 2020. 
 
