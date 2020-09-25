@@ -28,12 +28,17 @@ class: center, middle, title-slide
 
 # Why optimise? 
 
-Many stochastic elements in health economics analysis. 
-- Bootstrapping
-- Probabilistic sensitivity analyses
-- Monte-Carlo simulations
+Many stochastic elements in health economics analysis such as bootstrapping, probabilistic sensitivity analyses, Monte-Carlo simulations etc. 
 
-Code may become very repetitive and/or time consuming to run. 
+- Repetitive code
+- Time consuming to run
+- Memory issues
+
+--
+
+Optimising your code may resolve these problems. Also makes it easier to correct error, and makes your code neater and more readable. 
+
+
 
 ---
 
@@ -108,7 +113,7 @@ for(i in c(1:500)){
 
 # Vectorisation  
 
-- Many operations in R are vectorized 
+- Many operations in R are vectorised 
 - Instead of working on each element of the vector individually (as in the case of loops), it works on the entire vector. 
 
 
@@ -158,14 +163,13 @@ vector1 + vector2
 
 # Vectorising your code 
 
-- You can vectorise your loops using functions from the `apply()` family&lt;sup&gt;†&lt;/sup&gt;
+- You can also vectorise iterations (i.e. your loops) using functions from the `apply()` family&lt;sup&gt;†&lt;/sup&gt;
 - Natural extension from the `for` loop
 
 .pull-left[
 
 ```r
 bs_loop &lt;- numeric(500)
-
 for (i in c(1:500)) {
     set.seed(i)
     bs_loop[i] &lt;- calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
@@ -175,10 +179,10 @@ head(bs_loop, 3)
 ```
 
 ```
-## [1] 50.53451 50.58288 50.24213
+## [1] 49.96710 49.56903 49.66368
 ```
 
-Median time taken = 13.44ms
+Median time taken = 15.28ms
 ]
 
 .pull-right[
@@ -193,22 +197,25 @@ head(bs_vectorise,3)
 ```
 
 ```
-## [1] 50.53451 50.58288 50.24213
+## [1] 49.96710 49.56903 49.66368
 ```
-Median time taken = 10.09ms
+Median time taken = 10.94ms
 ]
 
 .footnote[
-[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family)
+[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family). Vectorised iterations can also be implemented using the `map()` family of functions in [`purrr`](https://purrr.tidyverse.org/). More details in [Garrett Grolemund &amp; Hadley Wickham | R for Data Science](https://r4ds.had.co.nz/iteration.html)
 ]
 
 ---
 
 # Parallelisation
 
-- Many different packages to achieve this. Some examples: 
-  + [foreach](https://cran.r-project.org/web/packages/foreach/vignettes/foreach.html) 
+- Running several processes simulataneously on multiple processors/cores of the computer
+- Many different packages to achieve this. Some examples:
+  + [parallel](https://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf)::mclapply()
   + [future](https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html)
+      + [furrr](https://davisvaughan.github.io/furrr/)::future_map()
+  + [foreach](https://cran.r-project.org/web/packages/foreach/vignettes/foreach.html) &amp; [doParallel](https://cran.r-project.org/web/packages/doParallel/vignettes/gettingstartedParallel.pdf)
   + [snowfall](https://cran.r-project.org/web/packages/snowfall/vignettes/snowfall.pdf)
 
 .footnote[
@@ -224,7 +231,8 @@ Some useful resources on parallelising
 
 
 ```r
-bs_parallelise &lt;- parallelsugar::mclapply(c(1:500), function(i){
+bs_parallelise &lt;- furrr::future_map(c(1:500), function(i){
+  set.seed(i)
   calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
 }) %&gt;% unlist()
 
@@ -232,16 +240,18 @@ head(bs_parallelise,3)
 ```
 
 ```
-## [1] 50.56135 50.28692 49.98931
+## [1] 49.96710 49.56903 49.66368
 ```
-Median time taken = 2660.68ms
+Median time taken = 25.82ms
 
-Notice that parallelising here is actually _SLOWER_ than vectorising? 
+--
+
+Notice that parallelising here is actually _SLOWER_? 
 
 ---
 
-### One caveat of parallelisation: overhead time&lt;sup&gt;†&lt;/sup&gt; 
-- Each parallel process have their own memory space and data/package needs to be loaded across them all
+### One of the caveats of parallelisation: overhead time&lt;sup&gt;†&lt;/sup&gt; 
+- Each parallel process has its own memory space and data/package needs to be loaded across them all
 - A "start-up" time is required before actual computation occurs
 - Need to weigh up the cost-benefit of using parallelisation
   + Usually cost &gt; benefit for smaller task
@@ -259,7 +269,7 @@ Notice that parallelising here is actually _SLOWER_ than vectorising?
 
 ### Pre-calculations
 
-For example, consider a simple simulation model where you are predicting the state a patient is in, and performing costs and QALYs calculation in each cycle. 
+Consider a simple simulation model where you are predicting the state a patient is in, and performing costs and QALYs calculation in each cycle. 
 If the model is simple enough, there is a finite combination of states a patient can be in.
 In this case, perhaps pre-calculating costs and QALYs for all possible combinations of states and applying them after the simulation would be faster than performing calculations every cycle.  
 
@@ -301,106 +311,17 @@ For an implementation of this work, see Sam Abbott's package [`SpeedyMarkov`](ht
 
 Markov model with 10 states
 
-&lt;img src="/image/markov-model.png" height="450" /&gt;
 
-- `n.treatments` - no. of treatment arms 
-- `n.samples` - no. of PSA samples
-- `n.cyles` - number of cycles to run
+&lt;img src="image/markov-model.png" height="450" /&gt;
 
 
-```
-## Warning: Some expressions had a GC in every iteration; so filtering is disabled.
+- `n.treatments = 2` | no. of treatment arms 
+- `n.samples = 25000` | no. of PSA samples
+- `n.cyles = 100` | number of cycles to run
 
-## Warning: Some expressions had a GC in every iteration; so filtering is disabled.
 
-## Warning: Some expressions had a GC in every iteration; so filtering is disabled.
 
-## Warning: Some expressions had a GC in every iteration; so filtering is disabled.
-```
 
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:stats' may not be available when loading
-```
-
-```
-## Warning in serialize(data, node$con): 'package:dplyr' may not be available when loading
-```
-
-```
-## Warning: Some expressions had a GC in every iteration; so filtering is disabled.
-```
 
 ---
 
@@ -408,18 +329,18 @@ Extract of code for Markov model (minimal, non-executable)
 
 ```r
 # Loop over the treatment options
-for(i.treatment in 1:n.treatments){
+*for(i.treatment in 1:n.treatments){
   
   # Extract transition matrix for treatment
   transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
     
   # Loop over the PSA samples
-  for(i.sample in 1:n.samples){
+* for(i.sample in 1:n.samples){
     
     transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
     
     # Loop over the cycles
-    for(i.cycle in 2:n.cycles){
+*   for(i.cycle in 2:n.cycles){
       
       # Markov update  
       cohort.vectors[i.treatment, i.sample,i.cycle,]&lt;-
@@ -434,26 +355,26 @@ for(i.treatment in 1:n.treatments){
 
 
 ---
-class: center, middle
 
-Time to run `n.treatments &lt;- 2; n.states &lt;- 10; n.cycles &lt;- 100; n.samples &lt;- 25000`
+class: center, middle
 
 &lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
  &lt;thead&gt;
   &lt;tr&gt;
    &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Median time across 50 iterations (ms) &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 20.03 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 
---- 
+
+---
 
 ### `lapply()` over treatments 
 
@@ -465,40 +386,38 @@ Time to run `n.treatments &lt;- 2; n.states &lt;- 10; n.cycles &lt;- 100; n.samp
   transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
   cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
   
-  for(i.sample in 1:n.samples){
+* for(i.sample in 1:n.samples){
     
     transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,]
     
-    for(i.cycle in 2:n.cycles){
+*   for(i.cycle in 2:n.cycles){
       
       cohort.vectors_tr_sample[i.cycle,] &lt;- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
-    
   }
-  
-*})
+})
 ```
 
 
 ---
-
+class: center, middle
 
 &lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
  &lt;thead&gt;
   &lt;tr&gt;
    &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Median time across 50 iterations (ms) &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 20.03 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.40 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.2s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -510,22 +429,21 @@ Time to run `n.treatments &lt;- 2; n.states &lt;- 10; n.cycles &lt;- 100; n.samp
 ### `lapply()` over PSA samples
 
 ```r
-for(i.treatment in c(1:n.treatments)){
+*for(i.treatment in c(1:n.treatments)){
   
   transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
   cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
   
+  # Vectorised over PSA samples
 * lapply(c(1:n.samples), function(i.sample){
     
     transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,]
 
-    # Loop over the cycles
-    for(i.cycle in 2:n.cycles){
-      # Markov update
+*   for(i.cycle in 2:n.cycles){
+      
       cohort.vectors_tr_sample[i.cycle,] &lt;- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
-
   }) 
 })
 ```
@@ -538,81 +456,21 @@ class: center, middle
  &lt;thead&gt;
   &lt;tr&gt;
    &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Median time across 50 iterations (ms) &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 20.03 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.40 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.2s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 17.36 &lt;/td&gt;
-  &lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-
----
-
-### `lapply()` over treatments &amp; `rcpp_loop()` over cycles
-
-
-```r
-## Vectorised over treatment
-*lapply(c(1:n.treatments), function(i.treatment){
-  
-  transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
-  cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
-  
-  # Loop over the PSA samples
-  for(i.sample in 1:n.samples)
-  {
-    
-    transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
-    
-    cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,]
-    
-    # Loop over the cycles using Rcpp
-    {{cohort.vectors_tr_sample &lt;- 
-      rcpp_loop(mat_in = cohort.vectors_tr_sample, transition = transition.matrices_tr_sample, n = n.cycles)}}
-    
-  }
-  
-})
-```
-
----
-class: center, middle
-
-
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
- &lt;thead&gt;
-  &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Median time across 50 iterations (ms) &lt;/th&gt;
-  &lt;/tr&gt;
- &lt;/thead&gt;
-&lt;tbody&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 20.03 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.40 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 17.36 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx_rcppcycle &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 7.01 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.4s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -623,17 +481,19 @@ class: center, middle
 
 
 ```r
-for(i.treatment in c(1:n.treatments)){
+*for(i.treatment in c(1:n.treatments)){
 
   transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
   cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
 
-* mclapply(c(1:n.samples), function(i.sample){
+  # Parallelised over PSA samples
+* furrr::future_map(c(1:n.samples), function(i.sample){
   
     transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,]
 
-    for(i.cycle in 2:n.cycles){
+*   for(i.cycle in 2:n.cycles){
+      
       cohort.vectors_tr_sample[i.cycle,] &lt;- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
   }) 
@@ -648,36 +508,131 @@ class: center, middle
  &lt;thead&gt;
   &lt;tr&gt;
    &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
-   &lt;th style="text-align:right;"&gt; Median time across 50 iterations (ms) &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 20.03 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.40 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.2s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 17.36 &lt;/td&gt;
-  &lt;/tr&gt;
-  &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx_rcppcycle &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 7.01 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.4s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:left;"&gt; parallelisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 72.47 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.2s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 
 ---
 
-# Some useful materials
+### `lapply()` over treatments &amp; `rcpp_loop()` over cycles
+
+
+```r
+# Vectorised over the treatment options
+*lapply(c(1:n.treatments), function(i.treatment){
+  
+  transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
+  cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
+  
+* for(i.sample in 1:n.samples){
+    
+    transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
+    
+    cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,]
+    
+    # Loop over the cycles using Rcpp
+*   cohort.vectors_tr_sample &lt;-
+*     rcpp_loop(mat_in = cohort.vectors_tr_sample,
+*               transition = transition.matrices_tr_sample,
+*               n = n.cycles)
+  }
+})
+```
+
+---
+
+class: center, middle
+
+
+&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 15.37s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.22s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.37s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; parallelisesmp &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.2s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; vectorisetx_rcppcycle &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 5.73s &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+---
+class: center
+
+### How to optimise? 
+
+Vectorising / parallelising etc.
+
+--
+
+## What should you optimise? 
+
+Profile your code to find bottlenecks&lt;sup&gt;†&lt;/sup&gt;.
+
+.footnote[
+
+[†] One way to easily profile your code is with [`profvis`](https://rstudio.github.io/profvis/). More about code profiling in [Hadley Wickham | Advanced R](https://adv-r.hadley.nz/perf-measure.html)
+
+]
+
+--
+
+# Should you even optimise at all? 
+
+First make it work correctly. Then, perhaps.
+
+--
+
+&lt;blockquote&gt;&lt;i&gt;
+We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evil. -- DonaldKnuth 
+&lt;/i&gt;&lt;/blockquote&gt;
+
+
+
+
+---
+
+
+# References
+
 
 &lt;p&gt;&lt;cite&gt;Gillespie, C. and R. Lovelace
 (2017).
@@ -686,6 +641,13 @@ Eng.
 First.
 Sebastopol, CA: O'Reilly.
 ISBN: 978-1-4919-5078-4.&lt;/cite&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;cite&gt;Hadley Wickham and Garrett Grolemund
+(2016).
+&lt;em&gt;R for Data Science&lt;/em&gt;.
+Eng.
+1st.
+O'Reilly Media, Inc..&lt;/cite&gt;&lt;/p&gt;
 
 &lt;p&gt;&lt;cite&gt;Wickham, H.
 (2019).
