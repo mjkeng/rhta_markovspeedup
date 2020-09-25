@@ -222,6 +222,7 @@ Some useful resources on parallelising
 ```{r eval = TRUE, warning = FALSE}
 
 bs_parallelise <- furrr::future_map(c(1:500), function(i){
+  set.seed(i)
   calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
 }) %>% unlist()
 
@@ -229,6 +230,8 @@ head(bs_parallelise,3)
 
 ```
 Median time taken = `r round(bench::mark(furrr::future_map(c(1:500), function(i){calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)}))$median*1000,2)`ms
+
+--
 
 Notice that parallelising here is actually _SLOWER_? 
 
@@ -295,7 +298,9 @@ For an implementation of this work, see Sam Abbott's package [`SpeedyMarkov`](ht
 
 Markov model with 10 states
 
-<img src="/image/markov-model.png" height="450" />
+
+<img src="image/markov-model.png" height="450" />
+
 
 - `n.treatments = 2` | no. of treatment arms 
 - `n.samples = 25000` | no. of PSA samples
@@ -305,7 +310,8 @@ Markov model with 10 states
 
 df_median_runtime <- readRDS("src/df_benchmark.rds") %>% 
   mutate(name = as.character(expression)) %>% 
-  select(name, median) 
+  select(name, median) %>% 
+  slice(match(c("base", "vectorisetx", "vectorisesmp", "parallelisesmp", "vectorisetx_rcppcycle"), name))
 
 # Pre-define column names
 colname_runtime <- c("Code", "Median time across 20 iterations")
@@ -379,15 +385,13 @@ lapply(c(1:n.treatments), function(i.treatment){  #<<
       
       cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
-    
   }
-  
 })
 ```
 
 
 ---
-
+class: center, middle
 
 ```{r echo = FALSE}
 
@@ -409,17 +413,16 @@ for(i.treatment in c(1:n.treatments)){ #<<
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
   
+  # Vectorised over PSA samples
   lapply(c(1:n.samples), function(i.sample){ #<<
     
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
 
-    # Loop over the cycles
     for(i.cycle in 2:n.cycles){ #<<
-      # Markov update
+      
       cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
-
   }) 
 })
 
@@ -448,12 +451,14 @@ for(i.treatment in c(1:n.treatments)){ #<<
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
 
+  # Parallelised over PSA samples
   furrr::future_map(c(1:n.samples), function(i.sample){ #<<
   
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
 
     for(i.cycle in 2:n.cycles){ #<<
+      
       cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
   }) 
@@ -478,13 +483,12 @@ df_median_runtime %>%
 ### `lapply()` over treatments & `rcpp_loop()` over cycles
 
 ```{r markov_expanded_lapply_rcpp, eval = FALSE}
-## Vectorised over treatment
+# Vectorised over the treatment options
 lapply(c(1:n.treatments), function(i.treatment){ #<<
   
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
   
-  # Loop over the PSA samples
   for(i.sample in 1:n.samples){ #<<
     
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
@@ -492,11 +496,11 @@ lapply(c(1:n.treatments), function(i.treatment){ #<<
     cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
     
     # Loop over the cycles using Rcpp
-    {{cohort.vectors_tr_sample <- 
-      rcpp_loop(mat_in = cohort.vectors_tr_sample, transition = transition.matrices_tr_sample, n = n.cycles)}}
-    
+    cohort.vectors_tr_sample <- #<<
+      rcpp_loop(mat_in = cohort.vectors_tr_sample, #<<
+                transition = transition.matrices_tr_sample, #<<
+                n = n.cycles) #<<
   }
-  
 })
 ```
 
@@ -535,17 +539,15 @@ Profile your code to find bottlenecks<sup>†</sup>.
 
 --
 
-# Should you optimise at all? 
+# Should you even optimise at all? 
 
 First make it work correctly. Then, perhaps.
 
 --
 
-<br />
-
-<blockquote>
+<blockquote><i>
 We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evil. -- DonaldKnuth 
-</blockquote>
+</i></blockquote>
 
 
 
@@ -553,7 +555,7 @@ We should forget about small efficiencies, say about 97% of the time: premature 
 ---
 
 
-# Some useful materials
+# References
 
 
 ```{r print-refs, echo=FALSE, eval=TRUE, results='asis'}
@@ -561,9 +563,4 @@ library(RefManageR)
 bib <- ReadBib("rhta_markovspeedup.bib", check = FALSE)
 print(bib, .opts = list(style = "html", bib.style = "authoryear"))
 ```
-
-
----
-class: centre, middle 
-
 
