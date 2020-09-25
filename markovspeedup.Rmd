@@ -40,9 +40,9 @@ calculate_bs_mean <- function(data, n, replacement){
 
 Many stochastic elements in health economics analysis such as bootstrapping, probabilistic sensitivity analyses, Monte-Carlo simulations etc. 
 
-- Repetitive code?
-- Time consuming to run?
-- Running out of memory?
+- Repetitive code
+- Time consuming to run
+- Memory issues
 
 --
 
@@ -168,7 +168,6 @@ vector1 + vector2
 .pull-left[
 ```{r, tidy = TRUE}
 bs_loop <- numeric(500)
-
 for(i in c(1:500)){
   set.seed(i)
   bs_loop[i] <- calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
@@ -194,16 +193,19 @@ Median time taken = `r round(bench::mark(sapply(c(1:500), function(i){set.seed(i
 ]
 
 .footnote[
-[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family)
+[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family). Vectorised iterations can also be implemented using the `map()` family of functions in [`purrr`](https://purrr.tidyverse.org/). More details in [Garrett Grolemund & Hadley Wickham | R for Data Science](https://r4ds.had.co.nz/iteration.html)
 ]
 
 ---
 
 # Parallelisation
 
-- Many different packages to achieve this. Some examples: 
-  + [foreach](https://cran.r-project.org/web/packages/foreach/vignettes/foreach.html) 
+- Running several processes simulataneously on multiple processors/cores of the computer
+- Many different packages to achieve this. Some examples:
+  + [parallel](https://stat.ethz.ch/R-manual/R-devel/library/parallel/doc/parallel.pdf)::mclapply()
   + [future](https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html)
+      + [furrr](https://davisvaughan.github.io/furrr/)::future_map()
+  + [foreach](https://cran.r-project.org/web/packages/foreach/vignettes/foreach.html) & [doParallel](https://cran.r-project.org/web/packages/doParallel/vignettes/gettingstartedParallel.pdf)
   + [snowfall](https://cran.r-project.org/web/packages/snowfall/vignettes/snowfall.pdf)
 
 .footnote[
@@ -228,11 +230,11 @@ head(bs_parallelise,3)
 ```
 Median time taken = `r round(bench::mark(furrr::future_map(c(1:500), function(i){calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)}))$median*1000,2)`ms
 
-Notice that parallelising here is actually _SLOWER_ than vectorising? 
+Notice that parallelising here is actually _SLOWER_? 
 
 ---
 
-### One caveat of parallelisation: overhead time<sup>†</sup> 
+### One of the caveats of parallelisation: overhead time<sup>†</sup> 
 - Each parallel process has its own memory space and data/package needs to be loaded across them all
 - A "start-up" time is required before actual computation occurs
 - Need to weigh up the cost-benefit of using parallelisation
@@ -295,9 +297,9 @@ Markov model with 10 states
 
 <img src="/image/markov-model.png" height="450" />
 
-- `n.treatments` - no. of treatment arms 
-- `n.samples` - no. of PSA samples
-- `n.cyles` - number of cycles to run
+- `n.treatments = 2` | no. of treatment arms 
+- `n.samples = 25000` | no. of PSA samples
+- `n.cyles = 100` | number of cycles to run
 
 ```{r setup-markov-time, eval = TRUE, echo = FALSE}
 
@@ -306,7 +308,7 @@ df_median_runtime <- readRDS("src/df_benchmark.rds") %>%
   select(name, median) 
 
 # Pre-define column names
-colname_runtime <- c("Code", "Median time across 10 iterations")
+colname_runtime <- c("Code", "Median time across 20 iterations")
 
 ```
 
@@ -317,18 +319,18 @@ colname_runtime <- c("Code", "Median time across 10 iterations")
 Extract of code for Markov model (minimal, non-executable)
 ```{r markov_expanded, eval = FALSE}
 # Loop over the treatment options
-for(i.treatment in 1:n.treatments){
+for(i.treatment in 1:n.treatments){ #<<
   
   # Extract transition matrix for treatment
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
     
   # Loop over the PSA samples
-  for(i.sample in 1:n.samples){
+  for(i.sample in 1:n.samples){ #<<
     
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     
     # Loop over the cycles
-    for(i.cycle in 2:n.cycles){
+    for(i.cycle in 2:n.cycles){ #<<
       
       # Markov update  
       cohort.vectors[i.treatment, i.sample,i.cycle,]<-
@@ -347,8 +349,6 @@ for(i.treatment in 1:n.treatments){
 
 class: center, middle
 
-Time to run `n.treatments <- 2; n.states <- 10; n.cycles <- 100; n.samples <- 25000`
-
 ```{r echo = FALSE}
 
 df_median_runtime %>% 
@@ -359,7 +359,7 @@ df_median_runtime %>%
 ```
 
 
---- 
+---
 
 ### `lapply()` over treatments 
 
@@ -370,19 +370,19 @@ lapply(c(1:n.treatments), function(i.treatment){  #<<
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
   
-  for(i.sample in 1:n.samples){
+  for(i.sample in 1:n.samples){ #<<
     
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
     
-    for(i.cycle in 2:n.cycles){
+    for(i.cycle in 2:n.cycles){ #<<
       
       cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
     
   }
   
-}) #<<
+})
 ```
 
 
@@ -404,7 +404,7 @@ df_median_runtime %>%
 
 ### `lapply()` over PSA samples
 ```{r markov_expanded_vectorisesmp, eval = FALSE}
-for(i.treatment in c(1:n.treatments)){
+for(i.treatment in c(1:n.treatments)){ #<<
   
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
@@ -415,7 +415,7 @@ for(i.treatment in c(1:n.treatments)){
     cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
 
     # Loop over the cycles
-    for(i.cycle in 2:n.cycles){
+    for(i.cycle in 2:n.cycles){ #<<
       # Markov update
       cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
@@ -440,6 +440,41 @@ df_median_runtime %>%
 
 ---
 
+### `mclapply()` over PSA samples
+
+```{r markov_expanded_parallisesmp_mclapply, eval = FALSE}
+for(i.treatment in c(1:n.treatments)){ #<<
+
+  transition.matrices_tr <- transition.matrices[i.treatment,,,]
+  cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
+
+  furrr::future_map(c(1:n.samples), function(i.sample){ #<<
+  
+    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
+    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
+
+    for(i.cycle in 2:n.cycles){ #<<
+      cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
+    }
+  }) 
+})
+```
+
+---
+class: center, middle
+
+
+```{r echo = FALSE}
+
+df_median_runtime %>% 
+  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "parallelisesmp")) %>% 
+  kable(col.names = colname_runtime, digit = 2) %>% 
+  kable_styling() 
+
+```
+
+---
+
 ### `lapply()` over treatments & `rcpp_loop()` over cycles
 
 ```{r markov_expanded_lapply_rcpp, eval = FALSE}
@@ -450,8 +485,7 @@ lapply(c(1:n.treatments), function(i.treatment){ #<<
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
   
   # Loop over the PSA samples
-  for(i.sample in 1:n.samples)
-  {
+  for(i.sample in 1:n.samples){ #<<
     
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     
@@ -467,56 +501,60 @@ lapply(c(1:n.treatments), function(i.treatment){ #<<
 ```
 
 ---
+
 class: center, middle
 
 
 ```{r echo = FALSE}
 
 df_median_runtime %>% 
-  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "vectorisetx_rcppcycle")) %>% 
+  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "parallelisesmp", "vectorisetx_rcppcycle")) %>% 
   kable(col.names = colname_runtime, digit = 2) %>% 
   kable_styling() 
 
 ```
 
 ---
+class: center
 
-### `mclapply()` over PSA samples
+### How to optimise? 
 
-```{r markov_expanded_parallisesmp_mclapply, eval = FALSE}
-for(i.treatment in c(1:n.treatments)){
+Vectorising / parallelising etc.
 
-  transition.matrices_tr <- transition.matrices[i.treatment,,,]
-  cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
+--
 
-  furrr::future_map(c(1:n.samples), function(i.sample){ #<<
-  
-    transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
-    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,]
+## What should you optimise? 
 
-    for(i.cycle in 2:n.cycles){
-      cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
-    }
-  }) 
-})
-```
+Profile your code to find bottlenecks<sup>†</sup>.
+
+.footnote[
+
+[†] One way to easily profile your code is with [`profvis`](https://rstudio.github.io/profvis/). More about code profiling in [Hadley Wickham | Advanced R](https://adv-r.hadley.nz/perf-measure.html)
+
+]
+
+--
+
+# Should you optimise at all? 
+
+First make it work correctly. Then, perhaps.
+
+--
+
+<br />
+
+<blockquote>
+We should forget about small efficiencies, say about 97% of the time: premature optimization is the root of all evil. -- DonaldKnuth 
+</blockquote>
+
+
+
 
 ---
-class: center, middle
 
-
-```{r echo = FALSE}
-
-df_median_runtime %>% 
-  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "vectorisetx_rcppcycle", "parallelisesmp")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
-
-```
-
----
 
 # Some useful materials
+
 
 ```{r print-refs, echo=FALSE, eval=TRUE, results='asis'}
 library(RefManageR)
