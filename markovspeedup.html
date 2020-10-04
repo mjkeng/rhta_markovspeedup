@@ -30,14 +30,13 @@ class: center, middle, title-slide
 
 Many stochastic elements in health economics analysis such as bootstrapping, probabilistic sensitivity analyses, Monte-Carlo simulations etc. 
 
-- Repetitive code
+- Repetitive / messy code
 - Time consuming to run
 - Memory issues
 
 --
 
 Optimising your code may resolve these problems. Also makes it easier to correct error, and makes your code neater and more readable. 
-
 
 
 ---
@@ -54,16 +53,17 @@ df &lt;- data.frame(id = c(1:n_sample),
                  cost = rnorm(n_sample, 50, 3))
 
 ## Create empty vector to store mean cost in each bootstrap sample
-bs_mean &lt;- numeric(500)
+bootstrap_mean &lt;- numeric()
 
 ## Sample without replacement and calculate mean for each bootstrap sample 
-bs_mean[1] &lt;- mean(sample(df$cost, n_sample, replace = FALSE)) 
-bs_mean[2] &lt;- mean(sample(df$cost, n_sample, replace = FALSE)) 
+bootstrap_mean[1] &lt;- mean(sample(df$cost, n_sample, replace = FALSE)) 
+bootstrap_mean[2] &lt;- mean(sample(df$cost, n_sample, replace = FALSE)) 
 ... 
 ## Keep repeating this code 500 times
 ...
-bs_mean[500] &lt;- mean(sample(df$cost, n_sample, replace = FALSE)) 
+bootstrap_mean[500] &lt;- mean(sample(df$cost, n_sample, replace = FALSE)) 
 ```
+
 
 ---
 class: center
@@ -89,25 +89,92 @@ You now realized you should have sampled with replacement!
 
 ---
 
-# Using functions and loops
 
-- Less repetition
-- Easier to fix errors
+# Using functions and loops
 
 
 ```r
-calculate_bs_mean &lt;- function(data, n, replacement){
+calculate_bootstrap_mean &lt;- function(data, n, replacement){
   mean(sample(data, n, replace = replacement)) 
 }
 
-bs_loop &lt;- numeric(500)
+bs_loop &lt;- numeric()
 
 for(i in c(1:500)){
   set.seed(i)
-  bs_loop[i] &lt;- calculate_bootstrap_mean(data = df$cost, n = n_sample, replacement = TRUE)
+  bs_loop[i] &lt;- calculate_bootstrap_mean(
+    data = df$cost, n = n_sample, replacement = TRUE)
 }
 ```
 
+
+--
+
+✓ Easier to debug and correct error
+
+--
+
+? What is R doing in each iteration of the `for` loop? 
+- Re-sizing vector 
+- Re-allocating memory 
+
+
+
+
+
+
+---
+
+# Functional programming
+
+- You can "vectorise" iterations (i.e. your loops) using functions from the `apply()` family&lt;sup&gt;†&lt;/sup&gt;
+- Natural extension from the `for` loop
+
+.pull-left[
+
+```r
+bs_loop &lt;- numeric(500)
+for (i in c(1:500)) {
+    set.seed(i)
+    bs_loop[i] &lt;- calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
+}
+
+head(bs_loop, 3)
+```
+
+```
+## [1] 50.67374 50.59056 49.62336
+```
+
+Median time taken = 12.81ms
+]
+
+.pull-right[
+
+```r
+bs_vectorise &lt;- sapply(c(1:500), function(i){
+  set.seed(i)
+  calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
+})
+
+head(bs_vectorise,3)
+```
+
+```
+## [1] 50.67374 50.59056 49.62336
+```
+Median time taken = 10.48ms
+]
+
+.footnote[
+[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family). Vectorised iterations can also be implemented using the `map()` family of functions in [`purrr`](https://purrr.tidyverse.org/). More details in [Garrett Grolemund &amp; Hadley Wickham | R for Data Science](https://r4ds.had.co.nz/iteration.html)
+]
+
+---
+
+class: center, middle
+
+Make your code more expressive! 
 
 ---
 
@@ -161,52 +228,6 @@ vector1 + vector2
 
 ---
 
-# Vectorising your code 
-
-- You can also vectorise iterations (i.e. your loops) using functions from the `apply()` family&lt;sup&gt;†&lt;/sup&gt;
-- Natural extension from the `for` loop
-
-.pull-left[
-
-```r
-bs_loop &lt;- numeric(500)
-for (i in c(1:500)) {
-    set.seed(i)
-    bs_loop[i] &lt;- calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
-}
-
-head(bs_loop, 3)
-```
-
-```
-## [1] 49.96710 49.56903 49.66368
-```
-
-Median time taken = 15.28ms
-]
-
-.pull-right[
-
-```r
-bs_vectorise &lt;- sapply(c(1:500), function(i){
-  set.seed(i)
-  calculate_bs_mean(data = df$cost, n = n_sample, replacement = TRUE)
-})
-
-head(bs_vectorise,3)
-```
-
-```
-## [1] 49.96710 49.56903 49.66368
-```
-Median time taken = 10.94ms
-]
-
-.footnote[
-[†] Read more about the `apply()` family of functions in [Carlo Fanara | Datacamp tutorial on the R Apply Family](https://www.datacamp.com/community/tutorials/r-tutorial-apply-family). Vectorised iterations can also be implemented using the `map()` family of functions in [`purrr`](https://purrr.tidyverse.org/). More details in [Garrett Grolemund &amp; Hadley Wickham | R for Data Science](https://r4ds.had.co.nz/iteration.html)
-]
-
----
 
 # Parallelisation
 
@@ -240,9 +261,9 @@ head(bs_parallelise,3)
 ```
 
 ```
-## [1] 49.96710 49.56903 49.66368
+## [1] 50.67374 50.59056 49.62336
 ```
-Median time taken = 25.82ms
+Median time taken = 24.05ms
 
 --
 
@@ -291,9 +312,9 @@ Sometimes R is just slow. But R has interfaces to other faster languages via pac
 
 Materials used in this case study is based on the work conducted as part of the 2019 R for Health Economics Hackathon. The team behind this work comprise of: 
 
+- Howard Thom, University of Bristol
 - Iryna Schlackow, University of Oxford
 - Mi Jun Keng, University of Oxford
-- Howard Thom, University of Bristol
 - Robert Ashton, Imperial College London
 - Sam Abbott, London School of Hygiene and Tropical Medicine
 - Amy Chang, University of Sheffield
