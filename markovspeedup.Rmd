@@ -550,7 +550,7 @@ for(i.treatment in c(1:n.treatments)){
         transition.matrices_tr_sample
     }
   }) 
-})
+}
 
 ```
 
@@ -588,7 +588,7 @@ for(i.treatment in c(1:n.treatments)){
       cohort.vectors_tr_sample[i.cycle,] <- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
   }) 
-})
+}
 ```
 
 ---
@@ -624,7 +624,7 @@ lapply(c(1:n.treatments), function(i.treatment){ #<<
                    transition.matrices_tr[,,i.state]) #<<
     } #<<
   }
-}
+})
 ```
 
 ---

@@ -62,23 +62,23 @@ df &lt;- data.frame(id = c(1:n_sample),
 &lt;tbody&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 52.11594 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 51.91813 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 46.39506 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 47.79129 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 3 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 51.27859 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 48.42329 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 4 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 53.98389 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 46.14935 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 5 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 51.44718 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 49.62297 &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -236,7 +236,7 @@ for(i in c(1:500)){
 }
 ```
 
-Median time taken = 11.91ms
+Median time taken = 10.74ms
 
 
 
@@ -246,7 +246,7 @@ boot_mean &lt;- lapply(c(1:500), function(i){
 })
 ```
 
-Median time taken = 9.18ms
+Median time taken = 9.77ms
 
 --
 
@@ -289,14 +289,14 @@ Suppose we want to test in our dummy cost dataset if the cost of treatment is mo
 ## Element-wise computation
 lapply(seq_along(df$cost), function(i){df$cost[i] &gt; 50})
 ```
-Median time taken = 143.48µs
+Median time taken = 144.24µs
 
 
 ```r
 ## Vectorised computation 
 df$cost &gt; 50
 ```
-Median time taken = 1.51µs
+Median time taken = 1.89µs
 
 ---
 
@@ -329,14 +329,14 @@ boot_mean &lt;- furrr::future_map(c(1:500), function(i){
 })
 ```
 
-Median time taken = 24.5ms (previously 9.18ms)
+Median time taken = 25.75ms (previously 9.77ms)
 
 
 ```r
 furrr::future_map(seq_along(df$cost), function(i){df$cost[i] &gt; 50})
 ```
 
-Median time taken = 14.71ms (previously 0.14348ms)
+Median time taken = 13.71ms (previously 0.14424ms)
 
 --
 
@@ -375,7 +375,7 @@ boot_mean &lt;- lapply(c(1:500), function(i){
 })
 ```
 
-Median time taken = 8.53ms (previously 9.18ms)
+Median time taken = 9.08ms (previously 9.77ms)
 
 - Dimension reduction
 
@@ -578,7 +578,7 @@ for(i.treatment in c(1:n.treatments)){
         transition.matrices_tr_sample
     }
   }) 
-})
+}
 ```
 
 
@@ -638,7 +638,7 @@ for(i.treatment in c(1:n.treatments)){
       cohort.vectors_tr_sample[i.cycle,] &lt;- cohort.vectors_tr_sample[i.cycle-1,] %*% transition.matrices_tr_sample
     }
   }) 
-})
+}
 ```
 
 ---
@@ -703,7 +703,7 @@ class: center, middle
 *                  transition.matrices_tr[,,i.state])
 *   }
   }
-}
+})
 ```
 
 ---
