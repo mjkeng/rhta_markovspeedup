@@ -28,9 +28,10 @@ output_df
 
 df_benchmark <- bench::mark(
   base = markov_expanded(), 
-  vectorisetx = markov_expanded_lapply(), 
-  vectorisesmp = markov_expanded_vectorisesmp(n.states = 10, n.cycles = 100, n.samples = 25000), 
-  vectorisetx_rcppcycle = markov_expanded_lapply_rcpp(), 
+  lapplytx = markov_expanded_lapply(), 
+  lapplysmp = markov_expanded_vectorisesmp(n.states = 10, n.cycles = 100, n.samples = 25000), 
+  lapplytx_vectorisesmp = markov_expanded_lapply_vectorise(), 
+  lapplytx_rcppcycle = markov_expanded_lapply_rcpp(), 
   parallelisesmp = markov_expanded_parallisesmp_furrr(n.states = 10, n.cycles = 100, n.samples = 25000), 
   iterations = 20, check = FALSE, memory = FALSE
 )
