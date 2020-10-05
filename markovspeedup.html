@@ -6,8 +6,6 @@
     <meta name="author" content="Mi Jun Keng mijun.keng@ndph.ox.ac.uk" />
     <link href="libs/remark-css/default.css" rel="stylesheet" />
     <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
-    <script src="libs/kePrint/kePrint.js"></script>
-    <link href="libs/lightable/lightable.css" rel="stylesheet" />
     <link rel="stylesheet" href="custom.css" type="text/css" />
   </head>
   <body>
@@ -64,23 +62,23 @@ df &lt;- data.frame(id = c(1:n_sample),
 &lt;tbody&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 1 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 51.45297 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 52.11594 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 2 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 55.24018 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 46.39506 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 3 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 48.61788 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 51.27859 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 4 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 52.83932 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 53.98389 &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
    &lt;td style="text-align:right;"&gt; 5 &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 49.12817 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 51.44718 &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -238,7 +236,7 @@ for(i in c(1:500)){
 }
 ```
 
-Median time taken = 11.71ms
+Median time taken = 11.91ms
 
 
 
@@ -248,7 +246,7 @@ boot_mean &lt;- lapply(c(1:500), function(i){
 })
 ```
 
-Median time taken = 9.15ms
+Median time taken = 9.18ms
 
 --
 
@@ -291,14 +289,14 @@ Suppose we want to test in our dummy cost dataset if the cost of treatment is mo
 ## Element-wise computation
 lapply(seq_along(df$cost), function(i){df$cost[i] &gt; 50})
 ```
-Median time taken = 140.84µs
+Median time taken = 143.48µs
 
 
 ```r
 ## Vectorised computation 
 df$cost &gt; 50
 ```
-Median time taken = 1.89µs
+Median time taken = 1.51µs
 
 ---
 
@@ -331,18 +329,18 @@ boot_mean &lt;- furrr::future_map(c(1:500), function(i){
 })
 ```
 
-Median time taken = 26.77ms (previously 9.15ms)
+Median time taken = 24.5ms (previously 9.18ms)
 
 
 ```r
 furrr::future_map(seq_along(df$cost), function(i){df$cost[i] &gt; 50})
 ```
 
-Median time taken = 14.79ms (previously 0.14084ms)
+Median time taken = 14.71ms (previously 0.14348ms)
 
 --
 
-__Notice that parallelising here is actually _SLOWER_?__
+__? Parallelising here is actually _SLOWER_?__
 
 ---
 
@@ -377,7 +375,7 @@ boot_mean &lt;- lapply(c(1:500), function(i){
 })
 ```
 
-Median time taken = 8.26ms (previously 9.15ms)
+Median time taken = 8.53ms (previously 9.18ms)
 
 - Dimension reduction
 
@@ -479,17 +477,21 @@ Extract of code for Markov model (minimal, non-executable)
 
 class: center, middle
 
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;table&gt;
  &lt;thead&gt;
   &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; PSA sample &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Cycle &lt;/th&gt;
    &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16.1s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -506,13 +508,13 @@ class: center, middle
   
   transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
   ## Dimension reduction 
-* cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
+  cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,] 
   
   for(i.sample in 1:n.samples){ 
     
     transition.matrices_tr_sample &lt;- transition.matrices_tr[i.sample,,]
     ## Dimension reduction 
-*   cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,]
+    cohort.vectors_tr_sample &lt;- cohort.vectors_tr[i.sample,,] 
     
     for(i.cycle in 2:n.cycles){ 
       
@@ -526,21 +528,27 @@ class: center, middle
 ---
 class: center, middle
 
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;table&gt;
  &lt;thead&gt;
   &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; PSA sample &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Cycle &lt;/th&gt;
    &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16.1s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 11.2s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.3s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -577,17 +585,33 @@ for(i.treatment in c(1:n.treatments)){
 ---
 class: center, middle
 
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;table&gt;
  &lt;thead&gt;
   &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; PSA sample &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Cycle &lt;/th&gt;
    &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16.1s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.3s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.3s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -621,29 +645,39 @@ for(i.treatment in c(1:n.treatments)){
 class: center, middle
 
 
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;table&gt;
  &lt;thead&gt;
   &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; PSA sample &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Cycle &lt;/th&gt;
    &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.4s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16.1s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 11.2s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.3s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 14.4s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.3s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; parallelisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 14.2s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: red !important;" &gt;parallel&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.8s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -655,19 +689,19 @@ class: center, middle
 
 ```r
 # Functional loop over the treatment options
-lapply(c(1:n.treatments), function(i.treatment){
+*lapply(c(1:n.treatments), function(i.treatment){
   
   transition.matrices_tr &lt;- transition.matrices[i.treatment,,,]
   cohort.vectors_tr &lt;- cohort.vectors[i.treatment,,,]
 
   for(i.cycle in 2:n.cycles){
     
-    for(i.state in 1:n.states){
-      ## Vectorised operation over samples
+    ## Reformulated such that vectorised operation over PSA samples
+*   for(i.state in 1:n.states){
 *      cohort.vectors_tr[ ,i.cycle,i.state]&lt;-
 *        rowSums(cohort.vectors_tr[ ,i.cycle-1, ] *
 *                  transition.matrices_tr[,,i.state])
-    }
+*   }
   }
 }
 ```
@@ -677,33 +711,45 @@ lapply(c(1:n.treatments), function(i.treatment){
 class: center, middle
 
 
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;table&gt;
  &lt;thead&gt;
   &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; PSA sample &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Cycle &lt;/th&gt;
    &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.37s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16.06s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 11.22s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.28s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 14.37s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.27s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; parallelisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 14.2s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: red !important;" &gt;parallel&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.79s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx_rcppcycle &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 5.73s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: red !important;" &gt;vectorised&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 9.21s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
@@ -731,7 +777,7 @@ class: center, middle
 *     rcpp_loop(mat_in = cohort.vectors_tr_sample,
 *               transition = transition.matrices_tr_sample,
 *               n = n.cycles)
-  }
+* }
 })
 ```
 
@@ -740,49 +786,68 @@ class: center, middle
 class: center, middle
 
 
-&lt;table class="table" style="margin-left: auto; margin-right: auto;"&gt;
+&lt;table&gt;
  &lt;thead&gt;
   &lt;tr&gt;
-   &lt;th style="text-align:left;"&gt; Code &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; PSA sample &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Cycle &lt;/th&gt;
    &lt;th style="text-align:right;"&gt; Median time across 20 iterations &lt;/th&gt;
   &lt;/tr&gt;
  &lt;/thead&gt;
 &lt;tbody&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; base &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 15.37s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 16.06s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 11.22s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 11.28s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 14.37s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.27s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; parallelisesmp &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 14.2s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: red !important;" &gt;parallel&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 14.79s &lt;/td&gt;
   &lt;/tr&gt;
   &lt;tr&gt;
-   &lt;td style="text-align:left;"&gt; vectorisetx_rcppcycle &lt;/td&gt;
-   &lt;td style="text-align:right;"&gt; 5.73s &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: red !important;" &gt;vectorised&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 9.21s &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: blue !important;" &gt;lapply&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: black !important;" &gt;for loop&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; &lt;span style="     color: red !important;" &gt;rcpp&lt;/span&gt; &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 5.85s &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/tbody&gt;
 &lt;/table&gt;
 
 ---
+
 class: center
 
 ### How to optimise? 
 
-Vectorising / parallelising etc.
+Functionals | Vectorising | Parallelising etc.
 
 --
 
 ## What should you optimise? 
 
-Profile your code to find bottlenecks&lt;sup&gt;†&lt;/sup&gt;.
+Always aim for readability | Profile your code to find bottlenecks&lt;sup&gt;†&lt;/sup&gt;
 
 .footnote[
 

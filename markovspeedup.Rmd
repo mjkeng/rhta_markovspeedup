@@ -313,7 +313,7 @@ Median time taken = `r round(bench::mark(furrr::future_map(seq_along(df$cost), f
 
 --
 
-__Notice that parallelising here is actually _SLOWER_?__
+__? Parallelising here is actually _SLOWER_?__
 
 ---
 
@@ -412,13 +412,31 @@ Markov model with 10 states (time-homogeneous; all transitions permitted)
 
 ```{r setup-markov-time, eval = TRUE, echo = FALSE}
 
+# define how tx|smp|cycle modeled 
+ordered_time <- rbind(
+  base = c("for loop", "for loop", "for loop"), 
+  lapplytx = c("lapply", "for loop", "for loop"), 
+  lapplysmp = c("for loop", "lapply", "for loop"), 
+  parallelisesmp = c("for loop", "parallel", "for loop"), 
+  lapplytx_vectorisesmp = c("lapply", "vectorised", "for loop"), 
+  lapplytx_rcppcycle = c("lapply", "for loop", "rcpp")
+) %>% 
+  `colnames<-`(c("tx", "smp", "cycle")) %>%
+  as_tibble(rownames = "name") 
+
 df_median_runtime <- readRDS("src/df_benchmark.rds") %>% 
   mutate(name = as.character(expression)) %>% 
   select(name, median) %>% 
-  slice(match(c("base", "vectorisetx", "vectorisesmp", "parallelisesmp", "vectorisetx_rcppcycle"), name))
+  slice(match(ordered_time$name, name)) %>% 
+  left_join(ordered_time) %>% 
+  select(name, tx, smp, cycle, median) %>% 
+  mutate_at(vars("tx", "smp", "cycle"), ~ cell_spec(., color = 
+                                                      case_when(. == "lapply" ~ "blue", 
+                                                                . %in% c("vectorised", "parallel", "rcpp") ~ "red",
+                                                                TRUE ~ "black")))
 
 # Pre-define column names
-colname_runtime <- c("Code", "Median time across 20 iterations")
+colname_runtime <- c("Tx", "PSA sample", "Cycle", "Median time across 20 iterations")
 
 ```
 
@@ -463,8 +481,8 @@ class: center, middle
 
 df_median_runtime %>% 
   filter(name %in% c("base")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
+  select(-name) %>% 
+  kable(col.names = colname_runtime, digit = 2, escape = FALSE) 
 
 ```
 
@@ -479,13 +497,13 @@ lapply(c(1:n.treatments), function(i.treatment){  #<<
   
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   ## Dimension reduction 
-  cohort.vectors_tr <- cohort.vectors[i.treatment,,,] #<<
+  cohort.vectors_tr <- cohort.vectors[i.treatment,,,] 
   
   for(i.sample in 1:n.samples){ 
     
     transition.matrices_tr_sample <- transition.matrices_tr[i.sample,,]
     ## Dimension reduction 
-    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,] #<<
+    cohort.vectors_tr_sample <- cohort.vectors_tr[i.sample,,] 
     
     for(i.cycle in 2:n.cycles){ 
       
@@ -502,9 +520,9 @@ class: center, middle
 ```{r echo = FALSE}
 
 df_median_runtime %>% 
-  filter(name %in% c("base", "vectorisetx")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
+  filter(name %in% c("base", "lapplytx")) %>% 
+  select(-name) %>% 
+  kable(col.names = colname_runtime, digit = 2, escape = FALSE) 
 
 ```
 
@@ -544,8 +562,8 @@ class: center, middle
 
 df_median_runtime %>% 
   filter(name %in% c("base", "lapplytx", "lapplysmp")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
+  select(-name) %>% 
+  kable(col.names = colname_runtime, digit = 2, escape = FALSE) 
 
 ```
 
@@ -580,9 +598,9 @@ class: center, middle
 ```{r echo = FALSE}
 
 df_median_runtime %>% 
-  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "parallelisesmp")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
+  filter(name %in% c("base", "lapplytx", "lapplysmp", "parallelisesmp")) %>% 
+  select(-name) %>% 
+  kable(col.names = colname_runtime, digit = 2, escape = FALSE) 
 
 ```
 
@@ -592,19 +610,19 @@ df_median_runtime %>%
 
 ```{r markov_expanded_lapply_vectorise, eval = FALSE}
 # Functional loop over the treatment options
-lapply(c(1:n.treatments), function(i.treatment){
+lapply(c(1:n.treatments), function(i.treatment){ #<<
   
   transition.matrices_tr <- transition.matrices[i.treatment,,,]
   cohort.vectors_tr <- cohort.vectors[i.treatment,,,]
 
   for(i.cycle in 2:n.cycles){
     
-    for(i.state in 1:n.states){
-      ## Vectorised operation over samples
+    ## Reformulated such that vectorised operation over PSA samples
+    for(i.state in 1:n.states){ #<<
        cohort.vectors_tr[ ,i.cycle,i.state]<- #<<
          rowSums(cohort.vectors_tr[ ,i.cycle-1, ] * #<<
                    transition.matrices_tr[,,i.state]) #<<
-    }
+    } #<<
   }
 }
 ```
@@ -617,9 +635,9 @@ class: center, middle
 ```{r echo = FALSE}
 
 df_median_runtime %>% 
-  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "parallelisesmp", "vectorisetx_rcppcycle")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
+  filter(name %in% c("base", "lapplytx", "lapplysmp", "parallelisesmp", "lapplytx_vectorisesmp")) %>% 
+  select(-name) %>% 
+  kable(col.names = colname_runtime, digit = 2, escape = FALSE) 
 
 ```
 
@@ -645,7 +663,7 @@ lapply(c(1:n.treatments), function(i.treatment){ #<<
       rcpp_loop(mat_in = cohort.vectors_tr_sample, #<<
                 transition = transition.matrices_tr_sample, #<<
                 n = n.cycles) #<<
-  }
+  } #<<
 })
 ```
 
@@ -657,24 +675,25 @@ class: center, middle
 ```{r echo = FALSE}
 
 df_median_runtime %>% 
-  filter(name %in% c("base", "vectorisetx", "vectorisesmp", "parallelisesmp", "vectorisetx_rcppcycle")) %>% 
-  kable(col.names = colname_runtime, digit = 2) %>% 
-  kable_styling() 
+  filter(name %in% c("base", "lapplytx", "lapplysmp", "parallelisesmp", "lapplytx_vectorisesmp", "lapplytx_rcppcycle")) %>% 
+  select(-name) %>% 
+  kable(col.names = colname_runtime, digit = 2, escape = FALSE) 
 
 ```
 
 ---
+
 class: center
 
 ### How to optimise? 
 
-Vectorising / parallelising etc.
+Functionals | Vectorising | Parallelising etc.
 
 --
 
 ## What should you optimise? 
 
-Profile your code to find bottlenecks<sup>†</sup>.
+Always aim for readability | Profile your code to find bottlenecks<sup>†</sup>
 
 .footnote[
 
