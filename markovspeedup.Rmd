@@ -569,7 +569,7 @@ df_median_runtime %>%
 
 ---
 
-### `mclapply()` over PSA samples
+### Parallelise over PSA samples
 
 ```{r markov_expanded_parallisesmp_mclapply, eval = FALSE}
 for(i.treatment in c(1:n.treatments)){ 
